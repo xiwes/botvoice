@@ -9,6 +9,24 @@ logging.basicConfig(filename=LOGS, level=logging.ERROR,
 path_to_db = DB_FILE  # файл базы данных
 
 
+def create_users_table():
+    try:
+        conn = sqlite3.connect(path_to_db)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER UNIQUE,
+                total_gpt_tokens INTEGER DEFAULT 0,
+                tts_symbols INTEGER DEFAULT 0,
+                stt_blocks INTEGER DEFAULT 0
+            )
+        ''')
+        conn.commit()
+        logging.info("DATABASE: Таблица users создана")
+    except Exception as e:
+        logging.error(f"Ошибка при создании таблицы users: {e}")
+
 # создаём базу данных и таблицу messages
 def create_database():
     try:
@@ -31,6 +49,9 @@ def create_database():
         logging.error(e)  # если ошибка - записываем её в логи
         return None
 
+if __name__ == "__main__":
+    create_database()
+    create_users_table()
 
 # добавляем новое сообщение в таблицу messages
 def add_message(user_id, full_message):
@@ -38,33 +59,32 @@ def add_message(user_id, full_message):
         # подключаемся к базе данных
         with sqlite3.connect(path_to_db) as conn:
             cursor = conn.cursor()
-            message, role, total_gpt_tokens, tts_symbols, stt_blocks = full_message
             # записываем в таблицу новое сообщение
             cursor.execute('''
                     INSERT INTO messages (user_id, message, role, total_gpt_tokens, tts_symbols, stt_blocks) 
                     VALUES (?, ?, ?, ?, ?, ?)''',
-                           (user_id, message, role, total_gpt_tokens, tts_symbols, stt_blocks)
+                           (user_id, full_message[0], full_message[1], full_message[2], full_message[3], full_message[4])
                            )
             conn.commit()  # сохраняем изменения
             logging.info(f"DATABASE: INSERT INTO messages "
-                         f"VALUES ({user_id}, {message}, {role}, {total_gpt_tokens}, {tts_symbols}, {stt_blocks})")
+                         f"VALUES ({user_id}, {full_message[0]}, {full_message[1]}, {full_message[2]}, {full_message[3]}, {full_message[4]})")
     except Exception as e:
         logging.error(e)  # если ошибка - записываем её в логи
         return None
 
 
+
 # считаем количество уникальных пользователей помимо самого пользователя
 def count_users(user_id):
     try:
-        # подключаемся к базе данных
-        with sqlite3.connect(path_to_db) as conn:
-            cursor = conn.cursor()
-            # получаем количество уникальных пользователей помимо самого пользователя
-            cursor.execute('''SELECT COUNT(DISTINCT user_id) FROM messages WHERE user_id <> ?''', (user_id,))
-            count = cursor.fetchone()[0]
-            return count
+        conn = sqlite3.connect(path_to_db)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM users WHERE user_id != ?", (user_id,))
+        count = cursor.fetchone()[0]
+        conn.close()
+        return count
     except Exception as e:
-        logging.error(e)  # если ошибка - записываем её в логи
+        logging.error(f"Ошибка при работе с БД: {e}")
         return None
 
 
@@ -96,24 +116,18 @@ def select_n_last_messages(user_id, n_last_messages=4):
         return messages, total_spent_tokens
 
 
-# подсчитываем количество потраченных пользователем ресурсов (<limit_type> - символы или аудиоблоки)
 def count_all_limits(user_id, limit_type):
     try:
-        # подключаемся к базе данных
         with sqlite3.connect(path_to_db) as conn:
             cursor = conn.cursor()
-            # считаем лимиты по <limit_type>, которые использовал пользователь
             cursor.execute(f'''SELECT SUM({limit_type}) FROM messages WHERE user_id=?''', (user_id,))
             data = cursor.fetchone()
-            # проверяем data на наличие хоть какого-то полученного результата запроса
-            # и на то, что в результате запроса мы получили какое-то число в data[0]
             if data and data[0]:
-                # если результат есть и data[0] == какому-то числу, то:
                 logging.info(f"DATABASE: У user_id={user_id} использовано {data[0]} {limit_type}")
-                return data[0]  # возвращаем это число - сумму всех потраченных <limit_type>
+                return data[0], ""  # Возвращаем число и пустую строку
             else:
-                # результата нет, так как у нас ещё нет записей о потраченных <limit_type>
-                return 0  # возвращаем 0
+                return 0, ""         # Возвращаем 0 и пустую строку
     except Exception as e:
-        logging.error(e)  # если ошибка - записываем её в логи
-        return 0
+        logging.error(e)
+        return None, str(e)     # Возвращаем None и сообщение об ошибке
+

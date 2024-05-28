@@ -1,6 +1,6 @@
 import math  # математический модуль для округления
 # подтягиваем константы из config файла
-from config import LOGS, MAX_USERS, MAX_USER_GPT_TOKENS, MAX_USER_TTS_SYMBOLS, MAX_USER_STT_BLOCKS
+from config import MAX_USERS, MAX_USER_GPT_TOKENS, MAX_USER_TTS_SYMBOLS, MAX_USER_STT_BLOCKS, LOGS
 # подтягиваем функции для работы с БД
 from db3 import count_users, count_all_limits
 # подтягиваем функцию для подсчета токенов в списке сообщений
@@ -33,7 +33,7 @@ def is_gpt_token_limit(messages, total_spent_tokens):
 def is_stt_block_limit(user_id, duration):
     try:
         # Получаем количество использованных блоков для пользователя
-        used_blocks, error_message = count_all_limits(user_id, 'stt_blocks')
+        used_blocks, error_message = count_all_limits(user_id, 'stt_blocks')  # Распаковываем кортеж
         if error_message:
             return None, error_message
 

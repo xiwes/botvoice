@@ -1,20 +1,17 @@
-from creds import get_creds  # Используем для получения IAM токена и Folder ID
 import requests
-
+from config import IAM_TOKEN, FOLDER_ID
 
 def speech_to_text(data):
-    iam_token, folder_id = get_creds()  # Получаем IAM токен и Folder ID
-
     # Указываем параметры запроса
     params = "&".join([
         "topic=general",  # используем основную версию модели
-        f"folderId={folder_id}",
+        f"folderId={FOLDER_ID}",
         "lang=ru-RU"  # распознаём голосовое сообщение на русском языке
     ])
 
     # Аутентификация через IAM-токен
     headers = {
-        'Authorization': f'Bearer {iam_token}',
+        'Authorization': f'Bearer {IAM_TOKEN}',
     }
 
     # Выполняем запрос
@@ -34,16 +31,15 @@ def speech_to_text(data):
 
 
 def text_to_speech(text):
-    iam_token, folder_id = get_creds()  # Получаем IAM токен и Folder ID
 
     headers = {
-        "Authorization": f"Bearer {iam_token}"
+        "Authorization": f"Bearer {IAM_TOKEN}"
     }
     data = {
         "text": text,
         "lang": "ru-RU",
         "voice": "alyss",
-        "folderId": folder_id
+        "folderId": FOLDER_ID
     }
     url = 'https://tts.api.cloud.yandex.net/speech/v1/tts:synthesize'
 

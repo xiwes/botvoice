@@ -6,15 +6,14 @@ from speeckit3 import speech_to_text, text_to_speech
 from validators import *  # модуль для валидации
 from yandex_gpt import ask_gpt
 
-from creds import get_bot_token  # модуль для получения bot_token
-
-bot = telebot.TeleBot(get_bot_token())  # создаём объект бота
-
-users = {}
+from config import TOKEN, LOGS
 
 # настраиваем запись логов в файл
 logging.basicConfig(filename=LOGS, level=logging.ERROR, format="%(asctime)s FILE: %(filename)s IN: %(funcName)s "
                                                                "MESSAGE: %(message)s", filemode="w")
+bot = telebot.TeleBot(TOKEN)  # создаём объект бота
+
+users = {}
 
 
 # обрабатываем команду /start
@@ -22,7 +21,6 @@ logging.basicConfig(filename=LOGS, level=logging.ERROR, format="%(asctime)s FILE
 def start(message):
     bot.send_message(message.from_user.id, "Привет! Я бот - голосовой помощник. Отправь мне голосовое сообщение или "
                                            "текст, и я тебе отвечу!")
-
 
 # обрабатываем команду /help
 @bot.message_handler(commands=['help'])

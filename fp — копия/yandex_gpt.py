@@ -1,43 +1,55 @@
 import requests
 import logging  # модуль для сбора логов
 # подтягиваем константы из config файла
-from config import LOGS, MAX_GPT_TOKENS, SYSTEM_PROMPT
-from creds import get_creds  # модуль для получения токенов
+from config import LOGS, MAX_GPT_TOKENS, SYSTEM_PROMPT, IAM_TOKEN, FOLDER_ID
 
 # настраиваем запись логов в файл
 logging.basicConfig(filename=LOGS, level=logging.ERROR,
                     format="%(asctime)s FILE: %(filename)s IN: %(funcName)s MESSAGE: %(message)s", filemode="w")
-
-iam_token, folder_id = get_creds()  # получаем iam_token и folder_id из файлов
 
 
 # подсчитываем количество токенов в сообщениях
 def count_gpt_tokens(messages):
     url = "https://llm.api.cloud.yandex.net/foundationModels/v1/tokenizeCompletion"
     headers = {
-        'Authorization': f'Bearer {iam_token}',
+        'Authorization': f'Bearer {IAM_TOKEN}',
         'Content-Type': 'application/json'
     }
     data = {
-        'modelUri': f"gpt://{folder_id}/yandexgpt-lite",
+        'modelUri': f"gpt://{FOLDER_ID}/yandexgpt-lite",
         "messages": messages
     }
     try:
-        return len(requests.post(url=url, json=data, headers=headers).json()['tokens'])
-    except Exception as e:
-        logging.error(e)  # если ошибка - записываем её в логи
-        return 0
+        response = requests.post(url=url, json=data, headers=headers)
+        response.raise_for_status()  # Проверяем на ошибки HTTP
+        response_data = response.json()
 
+        # Проверка наличия ключа 'tokens'
+        if 'tokens' not in response_data:
+            logging.error(f"Ошибка GPT. Ответ не содержит 'tokens': {response_data}")
+            return 0
+
+        return len(response_data['tokens'])
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Ошибка HTTP запроса: {e}")
+        return 0
+    except (KeyError, ValueError) as e:
+        logging.error(f"Ошибка обработки ответа: {e}")
+        return 0
+    except Exception as e:
+        logging.error(f"Непредвиденная ошибка GPT: {e}")
+        return 0
 
 # запрос к GPT
 def ask_gpt(messages):
     url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
     headers = {
-        'Authorization': f'Bearer {iam_token}',
+        'Authorization': f'Bearer {IAM_TOKEN}',
         'Content-Type': 'application/json'
     }
     data = {
-        'modelUri': f"gpt://{folder_id}/yandexgpt-lite",
+        'modelUri': f"gpt://{FOLDER_ID}/yandexgpt-lite",
         "completionOptions": {
             "stream": False,
             "temperature": 0.7,

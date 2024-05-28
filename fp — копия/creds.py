@@ -4,7 +4,7 @@ import time  # модуль для работы со временем
 from datetime import datetime  # модуль для работы с датой и временем
 import requests
 # подтягиваем константы из config-файла
-from config import LOGS, IAM_TOKEN, FOLDER_ID, BOT_TOKEN
+from config import LOGS, IAM_TOKEN, FOLDER_ID, TOKEN
 
 # настраиваем запись логов в файл
 logging.basicConfig(filename=LOGS, level=logging.INFO,
@@ -63,5 +63,5 @@ def get_creds():
 
 # чтение bot_token из файла
 def get_bot_token():
-    with open(BOT_TOKEN, 'r') as f:
+    with open(TOKEN, 'r') as f:
         return f.read().strip()
